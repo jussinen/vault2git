@@ -210,35 +210,40 @@ namespace Vault2Git.Lib
         {
             var ticks = Environment.TickCount;
             var lines = File.ReadAllLines(filePath).ToList();
-            //scan lines 
-            var searchingForStart = true;
-            var beginingLine = 0;
-            var endingLine = 0;
-            var currentLine = 0;
-            foreach(var line in lines)
-            {
-                var trimmedLine = line.Trim();
-                if (searchingForStart)
-                {
-                    if (trimmedLine.StartsWith("GlobalSection(SourceCodeControl)"))
-                    {
-                        beginingLine = currentLine;
-                        searchingForStart = false;
+            var updateNeeded = false;
+
+            string[] sections = new string[2]{"SourceCodeControl", "VaultVsipSolution-v2"};
+
+            foreach (string section in sections) {
+                //scan lines 
+                var searchingForStart = true;
+
+                var beginingLine = 0;
+                var endingLine = 0;
+                var currentLine = 0;
+                foreach (var line in lines) {
+                    var trimmedLine = line.Trim();
+                    if (searchingForStart) {
+                        if (trimmedLine.StartsWith("GlobalSection(" + section + ")")) {
+                            beginingLine = currentLine;
+                            searchingForStart = false;
+                        }
+                    } else {
+                        if (trimmedLine.StartsWith("EndGlobalSection")) {
+                            endingLine = currentLine;
+                            break;
+                        }
                     }
-                } else
-                {
-                    if (trimmedLine.StartsWith("EndGlobalSection"))
-                    {
-                        endingLine = currentLine;
-                        break;
-                    }
+                    currentLine++;
                 }
-                currentLine++;
+                //removing lines
+                if (beginingLine > 0 & endingLine > 0) {
+                    lines.RemoveRange(beginingLine, endingLine - beginingLine + 1);
+                    updateNeeded = true;
+
+                }
             }
-            //removing lines
-            if (beginingLine >0 & endingLine > 0)
-            {
-                lines.RemoveRange(beginingLine, endingLine - beginingLine + 1);
+            if (updateNeeded) {
                 File.WriteAllLines(filePath, lines.ToArray(), Encoding.UTF8);
             }
             return Environment.TickCount - ticks;
