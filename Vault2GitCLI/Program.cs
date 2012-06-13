@@ -4,6 +4,7 @@ using System.Configuration;
 using System.Linq;
 using System.Windows.Forms;
 using Vault2Git.Lib;
+using System.IO;
 
 namespace Vault2Git.CLI
 {
@@ -26,14 +27,36 @@ namespace Vault2Git.CLI
 
             private const string _limitParam = "--limit=";
             private const string _branchParam = "--branch=";
+            private const string _mapParam = "--map=";
 
-            public static Params Parse(string[] args, IEnumerable<string> gitBranches)
-            {
+            public static IDictionary<string, string> ParseMapping(string[] args) {
+                var paths = ConfigurationManager.AppSettings["Convertor.Paths"];
+
+                // if present, use the command line argument instead of the config
+                // this way, the config settings set in Converter.Paths are overridden
+                if (args.Any(n => n.StartsWith(_mapParam))) {
+                    paths = args.First(n => n.StartsWith(_mapParam)).Substring(_mapParam.Length);
+                }
+                if (paths.Contains("~")) {
+                    return paths.Split(';')
+                        .ToDictionary(
+                            pair =>
+                                pair.Split('~')[1], pair => pair.Split('~')[0]
+                            );
+                } else {
+                    // single folder to master - no branches involved
+                    Dictionary<string, string> pairs = new Dictionary<string, string>();
+                    pairs.Add("master", paths);
+                    return pairs;
+                }
+            }
+
+            public static Params Parse(string[] args, IEnumerable<string> gitBranches) {
                 var errors = new List<string>();
                 var branches = new List<string>();
 
                 var p = new Params();
-                foreach(var o in args) {
+                foreach (var o in args) {
                     if (o.Equals("--console-output"))
                         p.UseConsole = true;
                     else if (o.Equals("--caps-lock"))
@@ -42,47 +65,46 @@ namespace Vault2Git.CLI
                         p.SkipEmptyCommits = true;
                     else if (o.Equals("--ignore-labels"))
                         p.IgnoreLabels = true;
-                    else if (o.Equals("--help"))
-                    {
+                    else if (o.Equals("--help")) {
                         errors.Add("Usage: vault2git [options]");
                         errors.Add("options:");
                         errors.Add("   --help                  This screen");
                         errors.Add("   --console-output        Use console output (default=no output)");
                         errors.Add("   --caps-lock             Use caps lock to stop at the end of the cycle with proper finalizers (default=no caps-lock)");
                         errors.Add("   --branch=<branch>       Process only one branch from config. Branch name should be in git terms. Default=all branches from config");
+                        errors.Add("   --map=<mappings>        Set vault folder to branch mappings");
                         errors.Add("   --limit=<n>             Max number of versions to take from Vault for each branch");
                         errors.Add("   --skip-empty-commits    Do not create empty commits in Git");
                         errors.Add("   --ignore-labels         Do not create Git tags from Vault labels");
-                    }
-                    else
-                        if (o.StartsWith(_limitParam))
-                        {
-                            var l = o.Substring(_limitParam.Length);
-                            var max = 0;
-                            if (int.TryParse(l, out max))
-                                p.Limit = max;
-                            else
-                                errors.Add(string.Format("Incorrect limit ({0}). Use integer.", l));
-                        }
+                        errors.Add(string.Empty);
+                        errors.Add("<mappings>:");
+                        errors.Add("   format                  Format is <vault_folder>~master;<vault_folder>~<git_branch_name>.");
+                        errors.Add("                           If only <vault_folder> is specficed, master is assumed.");
+                    } else if (o.StartsWith(_limitParam)) {
+                        var l = o.Substring(_limitParam.Length);
+                        var max = 0;
+                        if (int.TryParse(l, out max))
+                            p.Limit = max;
                         else
-                            if (o.StartsWith(_branchParam))
-                            {
-                                var b = o.Substring(_limitParam.Length);
-                                if (gitBranches.Contains(b))
-                                    branches.Add(b);
-                                else
-                                    errors.Add(string.Format("Unknown branch {0}. Use one specified in .config", b));
-                            }
-                            else
-                                errors.Add(string.Format("Unknown option {0}", o));
+                            errors.Add(string.Format("Incorrect limit ({0}). Use integer.", l));
+                    } else if (o.StartsWith(_branchParam)) {
+                        var b = o.Substring(_limitParam.Length);
+                        if (gitBranches.Contains(b))
+                            branches.Add(b);
+                        else
+                            errors.Add(string.Format("Unknown branch {0}. Use one specified in .config", b));
+                    } else {
+                        errors.Add(string.Format("Unknown option {0}", o));
+                    }
                 }
                 p.Branches = 0 == branches.Count() 
                     ? gitBranches 
                     : branches;
                 p.Errors = errors;    
                 return p;
+                }
             }
-        }
+        
 
         private static bool _useCapsLock = false;
         private static bool _useConsole = false;
@@ -100,11 +122,7 @@ namespace Vault2Git.CLI
 
             //get configuration for branches
             var paths = ConfigurationManager.AppSettings["Convertor.Paths"];
-            var pathPairs = paths.Split(';')
-                .ToDictionary(
-                pair =>
-                    pair.Split('~')[1], pair => pair.Split('~')[0]
-                    );
+            var pathPairs = Params.ParseMapping(args);
 
             //parse params
             var param = Params.Parse(args, pathPairs.Keys);
@@ -125,7 +143,7 @@ namespace Vault2Git.CLI
 
             var processor = new Vault2Git.Lib.Processor()
                                 {
-                                    WorkingFolder = ConfigurationManager.AppSettings["Convertor.WorkingFolder"],
+                                    WorkingFolder = Directory.GetCurrentDirectory(),
                                     GitCmd = ConfigurationManager.AppSettings["Convertor.GitCmd"],
                                     GitDomainName = ConfigurationManager.AppSettings["Git.DomainName"],
                                     VaultServer = ConfigurationManager.AppSettings["Vault.Server"],

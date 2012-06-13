@@ -20,6 +20,8 @@ Setting up (simple way)
 	4. Create branches from initial commit
 	5. Change .config file to match your setup.
 	6. run vault2git.exe.
+	6a. run the following command for matching the current git repository to the vault folder pointed:
+		vault2git --map=$/VaultFolder
 
 How it works
 
