@@ -93,6 +93,8 @@ namespace Vault2Git.CLI
                             branches.Add(b);
                         else
                             errors.Add(string.Format("Unknown branch {0}. Use one specified in .config", b));
+                    } else if (o.StartsWith(_mapParam)) {
+                        // don't do anything: map parameter is allowed
                     } else {
                         errors.Add(string.Format("Unknown option {0}", o));
                     }
