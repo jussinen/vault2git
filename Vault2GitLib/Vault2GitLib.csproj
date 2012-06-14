@@ -106,13 +106,6 @@
     <Compile Include="Properties\AssemblyInfo.cs" />
   </ItemGroup>
   <ItemGroup>
-    <Content Include="libs\VaultClientAPI_4_0_6_15954\DragnetLib.dll" />
-    <Content Include="libs\VaultClientAPI_4_0_6_15954\SGDiff.dll" />
-    <Content Include="libs\VaultClientAPI_4_0_6_15954\VaultClientIntegrationLib.dll" />
-    <Content Include="libs\VaultClientAPI_4_0_6_15954\VaultClientNetLib.dll" />
-    <Content Include="libs\VaultClientAPI_4_0_6_15954\VaultClientOperationsLib.dll" />
-    <Content Include="libs\VaultClientAPI_4_0_6_15954\VaultLib.dll" />
-    <Content Include="libs\VaultClientAPI_4_0_6_15954\VCDiff.dll" />
     <Content Include="libs\VaultClientAPI_5_0_4_18845\DragnetLib.dll" />
     <Content Include="libs\VaultClientAPI_5_0_4_18845\ICSharpCode.SharpZipLib.dll" />
     <Content Include="libs\VaultClientAPI_5_0_4_18845\VaultClientIntegrationLib.dll" />
